@@ -1,4 +1,7 @@
 from bs4 import BeautifulSoup
+import gevent.monkey
+gevent.monkey.patch_socket()
+import gevent
 import re
 import time
 import random
@@ -15,12 +18,12 @@ class LoveGroupSpider():
         self.PageDefaltURL = 'https://www.douban.com/group/GuangZhoulove/'
         self.HostURL = 'www.douban.com'
         self.StartStep = 25
-        self.StartPage = 219
-        self.PageNum = 1923
-        self.PhotoPath = r'd:\DoubanPhoto'
-        self.PageFilePath = r'd:\DouBanPage.txt'
-        self.BlogFilePath = r'd:\DouBanBlog.txt'
-        # self.LogPath =r'd:\DouBanLog.txt'
+        self.StartPage = 500
+        self.PageNum = 1000
+        self.PhotoPath = r'DoubanPhoto'
+        self.PageFilePath = r'DouBanPage.txt'
+        self.BlogFilePath = r'DouBanBlog.txt'
+        # self.LogPath =r'DouBanLog.txt'
         
         self.re_pattern_bloglink = re.compile('^https://www.douban.com/group/topic/')
         self.re_pattern_blogimg = re.compile('doubanio.com/view/group_topic')
@@ -49,11 +52,14 @@ class LoveGroupSpider():
         if req:
             soup = BeautifulSoup(req.text, 'lxml')
             elements = soup.findAll(href=self.re_pattern_bloglink)
+            coroutines = []
             for index, ele in enumerate(elements):
                 blogLink = ele.get('href')
                 blogTitle = ele.get('title')
-                print '---------- SpiderBlogWeb:',  '[%d/%d]' % (index+1,len(elements)),  '['+blogTitle+']'
-                self.SpiderBlogWeb(blogLink, pageURL)
+                msg = '---------- SpiderBlogWeb:' + ('[%d/%d]' % (index+1,len(elements))) + '['+blogTitle+']'
+                coroutines.append(gevent.spawn(self.SpiderBlogWeb,blogLink,pageURL,msg))
+                #self.SpiderBlogWeb(blogLink, pageURL)
+	    gevent.joinall(coroutines)
             soup.decompose()
             
             if len(elements) <= 0:
@@ -63,22 +69,23 @@ class LoveGroupSpider():
             self.filePage.write(pageURL + '\n')
             self.filePage.flush()
            
-    def SpiderBlogWeb(self, blogURL, refererWeb):
+    def SpiderBlogWeb(self, blogURL, refererWeb, msg):
         headers = Util.GetHeaders(Host=self.HostURL, Referer=refererWeb)
-        req = Util.RequestURLByGet(blogURL, headers)
+        req = Util.RequestURLByGet(Util.Convert2HttpURL(blogURL), headers)
+        print msg
         if req:
             soup = BeautifulSoup(req.text, 'lxml')
             elements= soup.findAll(src=self.re_pattern_blogimg)
             for ele in elements:
                 photoURL = ele.get('src')
-                noNeedDownload = Util.DownloadFile(photoURL, self.PhotoPath)
+                noNeedDownload = Util.DownloadFile(Util.Convert2HttpURL(photoURL), self.PhotoPath)
                 print str(noNeedDownload),  photoURL
             
             soup.decompose()
             self.fileBlog.write(blogURL + '\n')
             if len(elements) > 0:
                 print ''
-        time.sleep(random.uniform(self.SleepTimeMin, self.SleepTimeMax))
+        #time.sleep(random.uniform(self.SleepTimeMin, self.SleepTimeMax))
     
     def GetPageURL(self, start):
         return self.PageBaseURL + str(start)

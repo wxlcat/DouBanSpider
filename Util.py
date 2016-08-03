@@ -55,6 +55,12 @@ def GetFilePath(fileName, dirPath):
         return os.path.normcase(os.path.join(dirPath, fileName))
     else:
         return fileName
+
+def Convert2HttpURL(url):
+    if(url.startswith('https')):
+        return 'http' + url[url.index('https')+5:]
+    else:
+        return url
     
 def DownloadFile(fileURL, dirPath):
     filePath = GetFilePath(GetFileNameByURL(fileURL), dirPath)
@@ -63,23 +69,22 @@ def DownloadFile(fileURL, dirPath):
         urllib.urlretrieve(fileURL, filePath)
     return noNeedDownload
 
-
 def RequestURLByGet(url, headers):
     try:
-        req = requests.request('get', url, headers=headers)
+        req = requests.request('get', url, headers=headers, allow_redirects=False)
     except requests.exceptions.RequestException, e:
-        print 'RequestException, ', e
+        print 'RequestException, ', url, e
     except urllib2.URLError, e:
         msg = 'URLError,'
         if hasattr(e, 'code'):
-            msg = msg + ' Code: ' + e.code
+            msg = msg + url + ' Code: ' + e.code
         if hasattr(e, 'reason'):
-            msg = msg + ' Reason: ' + e.reason
+            msg = msg + url + ' Reason: ' + e.reason
         print msg
     except Exception, e:
-        print 'Exception, ', e
+        print 'Exception, ', url, e
     except error, e:
-        print 'Error, ', e
+        print 'Error, ', url, e
     else:
         return req
     
