@@ -62,16 +62,25 @@ def Convert2HttpURL(url):
     else:
         return url
     
-def DownloadFile(fileURL, dirPath):
+def DownloadFile(fileURL, dirPath, log=False):
+    TryCreateDir(dirPath)
     filePath = GetFilePath(GetFileNameByURL(fileURL), dirPath)
     noNeedDownload = os.path.exists(filePath)
     if not noNeedDownload:
         urllib.urlretrieve(fileURL, filePath)
-    return noNeedDownload
+        
+    if log:    
+        print str(not noNeedDownload),  fileURL    
+    
+    return not noNeedDownload
 
-def RequestURLByGet(url, headers):
+def TryCreateDir(path):
+    if not os.path.exists(path):
+        os.mkdir(path)
+
+def RequestURLByGet(url, headers, cookies):
     try:
-        req = requests.request('get', url, headers=headers, allow_redirects=False)
+        req = requests.request('get', url, headers=headers, cookies=cookies)
     except requests.exceptions.RequestException, e:
         print 'RequestException, ', url, e
     except urllib2.URLError, e:
